@@ -61,7 +61,3 @@ jobs:
           app-name: 'rockman-bot'
           slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_873B2730DD3243C88169BA20580BA8A4 }}
-
-      - name: Install dependencies
-        run: python main.py
-        
