@@ -9,7 +9,6 @@ isort==5.9.3
 lazy-object-proxy==1.6.0
 Mastodon.py==1.5.1
 mccabe==0.6.1
-pkg-resources==0.0.0
 platformdirs==2.3.0
 pylint==2.11.1
 python-dateutil==2.8.2
