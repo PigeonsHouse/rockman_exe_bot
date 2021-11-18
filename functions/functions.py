@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List
 from schemas.status import Status, User
 from mastodon import Mastodon
-from utils.load_yaml import status_dict, config_dict
+from utils.load_yaml import status_dict, config_dict, update_status
 import time
 import random
 import re
@@ -19,8 +19,7 @@ def get_name(account: User):
 def rewrite(text: str):
     text = text.replace('</p><p>', '\n\n')
     text = text.replace('<br />','\n')
-    soup = bs4.BeautifulSoup(text, 'html.parser')
-    text = soup.get_text()
+    text = bs4.BeautifulSoup(text, 'html.parser').get_text()
     text = text.replace('&apos;', '\'')
     text = text.replace('&amp;', '&')
     text = text.replace('&quot;', '\"')
@@ -86,7 +85,8 @@ def task_boost_tomorrow(client: Mastodon):
         client.status_delete(client.account_statuses(client.account_verify_credentials()['id'], limit = 1)[0])
 
 def random_toot(client: Mastodon):
-    client.status_post(random.choice(config_dict['word']['rndtoot']), visibility='unlisted')
+    if status_dict['schedule_bool']['random']:
+        client.status_post(random.choice(config_dict['word']['rndtoot']), visibility='unlisted')
 
 def day_change(client: Mastodon):
     dt_now = datetime.now()
@@ -104,34 +104,43 @@ def day_change(client: Mastodon):
             client.toot("日付が変わったよ！\n「＃今日やること」でトゥートすると僕が日中何度もブーストするよ！")
 
 def summer_target(client: Mastodon):
-    client.status_post("皆が投稿した夏休みの目標をブーストするよ。\n目標は順調かな？", visibility='unlisted')
-    time.sleep(1)
-    tasklist = client.timeline_hashtag("夏休みの目標")
-    thissummerstart = datetime.now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-    for tl in tasklist:
-        toottime = tl['created_at'].replace(tzinfo=None) + datetime.timedelta(hours=9)
-        if  thissummerstart <= toottime:
-            time.sleep(5)
-            client.status_unreblog(tl)
-            time.sleep(5)
-            client.status_reblog(tl)
-        else:
-            break
+    if status_dict['schedule_bool']['summer']:
+        client.status_post("皆が投稿した夏休みの目標をブーストするよ。\n目標は順調かな？", visibility='unlisted')
+        time.sleep(1)
+        tasklist = client.timeline_hashtag("夏休みの目標")
+        thissummerstart = datetime.now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        for tl in tasklist:
+            toottime = tl['created_at'].replace(tzinfo=None) + datetime.timedelta(hours=9)
+            if  thissummerstart <= toottime:
+                time.sleep(5)
+                client.status_unreblog(tl)
+                time.sleep(5)
+                client.status_reblog(tl)
+            else:
+                break
 
 def spring_target(client: Mastodon):
-    client.status_post("皆が投稿した春休みにやることをブーストするよ。\n目標は順調かな？", visibility='unlisted')
-    time.sleep(1)
-    tasklist = client.timeline_hashtag("春休みにやりたいこと")
-    thissummerstart = datetime.now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-    for tl in tasklist:
-        toottime = tl['created_at'].replace(tzinfo=None) + datetime.timedelta(hours=9)
-        if  thissummerstart <= toottime:
-            time.sleep(5)
-            client.status_unreblog(tl)
-            time.sleep(5)
-            client.status_reblog(tl)
-        else:
-            break
+    if status_dict['schedule_bool']['spring']:
+        client.status_post("皆が投稿した春休みにやることをブーストするよ。\n目標は順調かな？", visibility='unlisted')
+        time.sleep(1)
+        tasklist = client.timeline_hashtag("春休みにやりたいこと")
+        thissummerstart = datetime.now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        for tl in tasklist:
+            toottime = tl['created_at'].replace(tzinfo=None) + datetime.timedelta(hours=9)
+            if  thissummerstart <= toottime:
+                time.sleep(5)
+                client.status_unreblog(tl)
+                time.sleep(5)
+                client.status_reblog(tl)
+            else:
+                break
+
+def change_bot_status(client: Mastodon, key: str, bool: bool):
+    global status_dict
+    status_dict['schedule_bool'][key] = bool
+    update_status()
+    hoge = status_dict['schedule_bool'][key]
+    print(f'|| change status || {key}: {hoge}')
 
 def food_terro(client: Mastodon):
     dishlist = client.timeline_hashtag("CompositeCookingClub", only_media = True)

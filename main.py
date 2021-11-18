@@ -2,9 +2,12 @@ from functions.streamings import LTLlisten
 from functions.schedules import scheduler
 import time
 import threading
+from utils.clients import client
 
 if __name__ == '__main__':
-    threading.Thread(target = LTLlisten).start()
+    threading.Thread(target = LTLlisten, args=(client,)).start()
+
+    all_jobs = scheduler.get_jobs()
 
     while True:
         try:
