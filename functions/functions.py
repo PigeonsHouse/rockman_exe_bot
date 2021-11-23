@@ -1,4 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from io import TextIOWrapper
+from dateutil.relativedelta import relativedelta
 from typing import List
 from schemas.status import Status, User
 from mastodon import Mastodon
@@ -9,6 +11,9 @@ import re
 import bs4
 import urllib
 import os
+import pytz
+
+base_url = 'https://mastodon.compositecomputer.club'
 
 def get_name(account: User):
     if len(account['display_name']) == 0:
@@ -16,9 +21,13 @@ def get_name(account: User):
     else:
         return account['display_name']
 
-def rewrite(text: str):
-    text = text.replace('</p><p>', '\n\n')
-    text = text.replace('<br />','\n')
+def rewrite(text: str, doRet: bool = True):
+    if doRet:
+        text = text.replace('</p><p>', '\n\n')
+        text = text.replace('<br />','\n')
+    else:
+        text = text.replace('</p><p>', ' ')
+        text = text.replace('<br />',' ')
     text = bs4.BeautifulSoup(text, 'html.parser').get_text()
     text = text.replace('&apos;', '\'')
     text = text.replace('&amp;', '&')
@@ -28,18 +37,18 @@ def rewrite(text: str):
 def chime(client: Mastodon, chime_time: str, class_time: int = 0):
     dt_now = datetime.now()
     if dt_now.weekday() < 5 and status_dict['schedule_bool']['chime']:
-        if not class_time:
-            toottext = "今は" + chime_time + "\nもうすぐ" + class_time + "時限目が始まるよ。遅刻しないようにね！"
+        if class_time:
+            toottext = "今は" + chime_time + "\nもうすぐ" + str(class_time) + "時限目が始まるよ。遅刻しないようにね！"
         else:
             toottext = "今は" + chime_time + "\nお昼休みだね。"
         client.toot(toottext)
         time.sleep(1)
         return
 
-def task_boost():
-    task_boost_today()
+def task_boost(client: Mastodon):
+    task_boost_today(client)
     time.sleep(120)
-    task_boost_tomorrow()
+    task_boost_tomorrow(client)
 
 def task_boost_today(client: Mastodon):
     reblogcnt = 0
@@ -100,6 +109,7 @@ def day_change(client: Mastodon):
                 status = '月が変わってお知らせよ！',
                 media_ids = [client.media_post("medias/sailormoon.jpg")]
             )
+            buzz_toot(client)
         else:
             client.toot("日付が変わったよ！\n「＃今日やること」でトゥートすると僕が日中何度もブーストするよ！")
 
@@ -148,6 +158,7 @@ def food_terro(client: Mastodon):
     toottext = get_name(dishtoot['account']) + "さんの投稿した料理だよ！\nおいしそうだね！"
     dish_madiafile = []
     for media in dishtoot['media_attachments']:
+        print(media['url'])
         urllib.request.urlretrieve(
             media['url'],
             str(media['id']) + "_dish.jpg"
@@ -202,7 +213,8 @@ def humor_sense_return(client):
     client.toot(random.choice(config_dict['word']['humor_reacts']))
 
 def random_toot(client: Mastodon):
-    client.status_post(random.choice(config_dict['word']['rndtoot']), visibility='unlisted')
+    if status_dict['schedule_bool']['random']:
+        client.status_post(random.choice(config_dict['word']['rndtoot']), visibility='unlisted')
 
 def parrot_toot(client: Mastodon, content: str):
     if content.find("ロックマン") == 0:
@@ -285,3 +297,44 @@ def three_point_generator(client: Mastodon, status: Status):
         status = rocktoot,
         spoiler_text = sptxt
     )
+
+def buzz_toot(client: Mastodon):
+    whole_timeline = []
+    max_id = None
+    limit_datetime = datetime.now(tz=pytz.UTC) - relativedelta(months=1)
+    print(limit_datetime)
+    while True:
+        get_timeline = client.timeline_local(max_id=max_id)
+        print(len(get_timeline))
+        whole_timeline += get_timeline[:]
+        oldest_datetime = get_timeline[-1]['created_at']
+        print(oldest_datetime)
+        time.sleep(2)
+        if oldest_datetime < limit_datetime:
+            break
+        max_id = get_timeline[-1]['id']
+        print(max_id)
+    
+    top_five_id = []
+
+    for toot in whole_timeline:
+        favorite_count = toot['favourites_count']
+        boost_count = toot['reblogs_count']
+        content = rewrite(toot['content'])
+        if len(content) > 15:
+            content = content[:14]+'…'
+        top_five_id.append({
+            "id": toot['id'],
+            "user_id": toot['account']['acct'],
+            "username": get_name(toot['account']),
+            "content": content,
+            "point": boost_count * 5 + favorite_count
+        })
+        if len(top_five_id) > 5:
+            top_five_id = sorted(top_five_id, key=lambda x: x['point'], reverse=True)[:5]
+
+    toot_text = "今月のバズったトゥートTOP5発表！\n\n"
+    for i in range(5):
+        toot = top_five_id[i]
+        toot_text += f"{i+1}. {toot['username']} 「{toot['content']}」\n{base_url}/@{toot['user_id']}/{toot['id']}\n"
+    client.toot(toot_text)

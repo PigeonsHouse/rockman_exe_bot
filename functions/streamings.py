@@ -2,13 +2,11 @@ from schemas.status import Status
 from mastodon import Mastodon, StreamListener
 from utils.load_env import ACCESS_TOKEN
 from utils.load_yaml import config_dict
-from .functions import ( change_bot_status, rewrite, food_terro, save_toot, humor_sense, humor_sense_return, 
+from .functions import ( buzz_toot, change_bot_status, rewrite, food_terro, save_toot, humor_sense, humor_sense_return, 
     random_toot, parrot_toot, greeting_toot, delete_rockman_toot, reply_random_toot, my_post_count, 
-    post_count, toot_todays_info, toot_now_info, battle_operation, three_point_generator)
+    post_count, toot_todays_info, toot_now_info, battle_operation, three_point_generator, base_url)
 import time
 import re
-
-base_url = 'https://mastodon.compositecomputer.club'
 
 class Bot(StreamListener):
     bool_keywords = {
@@ -94,6 +92,9 @@ class Bot(StreamListener):
             if get_status['content'].find('三点リーダージェネレーター\n') == 0 and re.search(r'(…|\.\.\.|・・・|･･･)', get_status['content']):
                 three_point_generator(self.client, get_status)
                 return
+            if get_status['account']['id'] == config_dict['developer_account_id']:
+                if "buzz_toot" in get_status['content']:
+                    buzz_toot(self.client)
 
 def Login() -> Mastodon:
     mastodon = Mastodon(

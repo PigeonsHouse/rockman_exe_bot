@@ -6,7 +6,7 @@ import schedule
 scheduler = schedule.Scheduler()
 
 for i, task_time in enumerate(config_dict['time']['chimetime']):
-    scheduler.every().day.at(task_time).do(chime, client=client, chime_time=task_time, class_time=(i + 1 if i < 5 else None))
+    scheduler.every().day.at(task_time).do(chime, client=client, chime_time=task_time, class_time=i)
 for task_time in config_dict['time']['tasktime']:
     scheduler.every().day.at(task_time).do(task_boost, client=client)
 for task_time in config_dict['time']['rndtime']:

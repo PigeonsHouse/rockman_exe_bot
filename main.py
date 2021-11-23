@@ -6,9 +6,11 @@ from utils.clients import client
 
 if __name__ == '__main__':
     threading.Thread(target = LTLlisten, args=(client,)).start()
+    print("start streaming timeline")
 
     all_jobs = scheduler.get_jobs()
 
+    print("start schedule preparation")
     while True:
         try:
             scheduler.run_pending()
