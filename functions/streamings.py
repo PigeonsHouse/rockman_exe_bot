@@ -2,23 +2,24 @@ from schemas.status import Status
 from mastodon import Mastodon, StreamListener
 from utils.load_env import ACCESS_TOKEN
 from utils.load_yaml import config_dict
-from .functions import ( buzz_toot, change_bot_status, rewrite, food_terro, save_toot, humor_sense, humor_sense_return, 
-    random_toot, parrot_toot, greeting_toot, delete_rockman_toot, reply_random_toot, my_post_count, 
+from .functions import ( buzz_toot, change_bot_status, get_name, rewrite, food_terro, save_toot, humor_sense,
+    humor_sense_return, parrot_toot, greeting_toot, delete_rockman_toot, reply_random_toot, my_post_count, 
     post_count, toot_todays_info, toot_now_info, battle_operation, three_point_generator, base_url)
+from datetime import datetime
 import time
 import re
 
 class Bot(StreamListener):
     bool_keywords = {
-        'ストップして': False,
-        'スタートして': True,
+        'stop': False,
+        'start': True,
     }
-    status_keywords = {
-        'chime': 'チャイム', 
-        'summer': '夏休みの目標', 
-        'spring': '春休みの目標', 
-        'random': 'ランダムトゥート'
-    }
+    status_keywords = [
+        'chime',
+        'summer',
+        'spring',
+        'random'
+    ]
 
     def __init__(self, client):
         super(Bot, self).__init__()
@@ -27,19 +28,14 @@ class Bot(StreamListener):
     def on_update(self, status: Status):
         get_status = status
         get_status['content'] = rewrite(get_status['content'])
+        print(datetime.now())
+        print(f"==={get_name(get_status['account'])}======\n{get_status['content']}\n\n")
 
         if get_status['account']['bot'] or get_status['reblog'] != None:
             return
 
         if 'ロックマン' in get_status['content']:
             self.client.status_favourite(get_status)
-            for b_key, b_value in self.bool_keywords.items():
-                if b_key in get_status['content']:
-                    for s_key, s_keyword in self.status_keywords.items():
-                        if s_keyword in get_status['content']:
-                            change_bot_status(self.client, s_key, b_value)
-                            return
-
             if re.search(r'((お(腹|なか)(空|す)いた)|(腹|はら)(減|へ)った)', get_status['content']):
                 food_terro(self.client)
                 return
@@ -53,7 +49,7 @@ class Bot(StreamListener):
                 humor_sense_return(self.client)
                 return
             if "何か言って" in get_status['content']:
-                random_toot(self.client)
+                reply_random_toot(self.client, get_status)
                 return
             if not "りあむ" in get_status['content']:
                 if "って言" in get_status['content']:
@@ -93,8 +89,15 @@ class Bot(StreamListener):
                 three_point_generator(self.client, get_status)
                 return
             if get_status['account']['id'] == config_dict['developer_account_id']:
-                if "buzz_toot" in get_status['content']:
-                    buzz_toot(self.client)
+                for b_key, b_value in self.bool_keywords.items():
+                    if b_key in get_status['content']:
+                        for s_value in self.status_keywords:
+                            if s_value in get_status['content']:
+                                change_bot_status(self.client, s_value, b_value, status)
+                                return
+                if "test" in get_status['content']:
+                    if "buzz_toot" in get_status['content']:
+                        buzz_toot(self.client)
 
 def Login() -> Mastodon:
     mastodon = Mastodon(
@@ -109,5 +112,6 @@ def LTLlisten(client: Mastodon):
         try:
             client.stream_local(bot)
         except Exception as e:
+            print(datetime.now())
             print(e)
             time.sleep(60)

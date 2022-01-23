@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from io import TextIOWrapper
 from dateutil.relativedelta import relativedelta
 from typing import List
@@ -36,11 +36,16 @@ def rewrite(text: str, doRet: bool = True):
 
 def chime(client: Mastodon, chime_time: str, class_time: int = 0):
     dt_now = datetime.now()
+    print("start chime func!!")
+    print(f'now time is {dt_now}')
+    print(f'chime time is {chime_time}')
     if dt_now.weekday() < 5 and status_dict['schedule_bool']['chime']:
         if class_time:
             toottext = "今は" + chime_time + "\nもうすぐ" + str(class_time) + "時限目が始まるよ。遅刻しないようにね！"
         else:
             toottext = "今は" + chime_time + "\nお昼休みだね。"
+        print(toottext)
+        print('\n')
         client.toot(toottext)
         time.sleep(1)
         return
@@ -51,51 +56,37 @@ def task_boost(client: Mastodon):
     task_boost_tomorrow(client)
 
 def task_boost_today(client: Mastodon):
-    reblogcnt = 0
     tasklist = client.timeline_hashtag("今日やること")
     todaystart = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     for tl in tasklist:
         if tl.application:
             if tl.application.name == 'hatoBot':
                 continue
-        toottime = tl['created_at'].replace(tzinfo=None) + datetime.timedelta(hours=9)
+        toottime = tl['created_at'].replace(tzinfo=None) + timedelta(hours=9)
         if  todaystart <= toottime:
-            reblogcnt += 1
             time.sleep(5)
             client.status_unreblog(tl)
             time.sleep(5)
             client.status_reblog(tl)
         else:
             break
-    if reblogcnt == 0:
-        time.sleep(1)
-        client.status_delete(client.account_statuses(client.me()['id'], limit = 1)[0])
 
 def task_boost_tomorrow(client: Mastodon):
-    reblogcnt = 0
     tasklist = client.timeline_hashtag("明日やること")
     todaystart = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    yeststart = todaystart - datetime.timedelta(hours=24)
+    yeststart = todaystart - timedelta(hours=24)
     for tl in tasklist:
         if tl.application:
             if tl.application.name == 'hatoBot':
                 continue
-        toottime = tl['created_at'].replace(tzinfo=None) + datetime.timedelta(hours=9)
+        toottime = tl['created_at'].replace(tzinfo=None) + timedelta(hours=9)
         if yeststart <= toottime < todaystart:
-            reblogcnt += 1
             time.sleep(5)
             client.status_unreblog(tl)
             time.sleep(5)
             client.status_reblog(tl)
         else:
             break
-    if reblogcnt == 0:
-        time.sleep(1)
-        client.status_delete(client.account_statuses(client.account_verify_credentials()['id'], limit = 1)[0])
-
-def random_toot(client: Mastodon):
-    if status_dict['schedule_bool']['random']:
-        client.status_post(random.choice(config_dict['word']['rndtoot']), visibility='unlisted')
 
 def day_change(client: Mastodon):
     dt_now = datetime.now()
@@ -120,7 +111,7 @@ def summer_target(client: Mastodon):
         tasklist = client.timeline_hashtag("夏休みの目標")
         thissummerstart = datetime.now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
         for tl in tasklist:
-            toottime = tl['created_at'].replace(tzinfo=None) + datetime.timedelta(hours=9)
+            toottime = tl['created_at'].replace(tzinfo=None) + timedelta(hours=9)
             if  thissummerstart <= toottime:
                 time.sleep(5)
                 client.status_unreblog(tl)
@@ -136,7 +127,7 @@ def spring_target(client: Mastodon):
         tasklist = client.timeline_hashtag("春休みにやりたいこと")
         thissummerstart = datetime.now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
         for tl in tasklist:
-            toottime = tl['created_at'].replace(tzinfo=None) + datetime.timedelta(hours=9)
+            toottime = tl['created_at'].replace(tzinfo=None) + timedelta(hours=9)
             if  thissummerstart <= toottime:
                 time.sleep(5)
                 client.status_unreblog(tl)
@@ -145,12 +136,14 @@ def spring_target(client: Mastodon):
             else:
                 break
 
-def change_bot_status(client: Mastodon, key: str, bool: bool):
+def change_bot_status(client: Mastodon, key: str, bool: bool, status_for_reply: Status):
     global status_dict
     status_dict['schedule_bool'][key] = bool
     update_status()
-    hoge = status_dict['schedule_bool'][key]
-    print(f'|| change status || {key}: {hoge}')
+    toot_text = ''
+    for new_key, new_bool in status_dict['schedule_bool'].items():
+        toot_text += f'\n{new_key}: {"ON" if new_bool else "OFF"}'
+    client.status_reply(status_for_reply, toot_text)
 
 def food_terro(client: Mastodon):
     dishlist = client.timeline_hashtag("CompositeCookingClub", only_media = True)
@@ -182,7 +175,7 @@ def save_toot(client: Mastodon, content: str):
             saved_toot = timeline[chase]
             saved_content = rewrite(saved_toot['content'])
             fish_madiafile = []
-            for media in save_toot['media_attachments']:
+            for media in saved_toot['media_attachments']:
                 urllib.request.urlretrieve(
                     media['url'], 
                     str(media['id']) + "_fish.jpg"
@@ -217,6 +210,7 @@ def random_toot(client: Mastodon):
         client.status_post(random.choice(config_dict['word']['rndtoot']), visibility='unlisted')
 
 def parrot_toot(client: Mastodon, content: str):
+    newtoot = content
     if content.find("ロックマン") == 0:
         if content.find("ロックマン、") == 0:
             newtoot = content.replace("ロックマン、", "")
@@ -286,8 +280,9 @@ def battle_operation(client: Mastodon, status: Status):
     client.status_reply(status, "イン！")
 
 def three_point_generator(client: Mastodon, status: Status):
+    print('hoge')
     rocktoot = status['content'][14:].replace('…', 'ｯ!!').replace('、', 'ｯ!!').replace('，', 'ｯ!!').replace(',', 'ｯ!!').replace('...', 'ｯ!!').replace('・・・', 'ｯ!!').replace('･･･', 'ｯ!!')
-    rocktoot = "[" + get_name(status['content']) + "]\n" + rocktoot
+    rocktoot = "[" + get_name(status['account']) + "]\n" + rocktoot
     sptxt = ''
     if len(rocktoot) > 90:
         sptxt = '三点リーダージェネレーター'
@@ -305,15 +300,12 @@ def buzz_toot(client: Mastodon):
     print(limit_datetime)
     while True:
         get_timeline = client.timeline_local(max_id=max_id)
-        print(len(get_timeline))
         whole_timeline += get_timeline[:]
         oldest_datetime = get_timeline[-1]['created_at']
-        print(oldest_datetime)
         time.sleep(2)
         if oldest_datetime < limit_datetime:
             break
         max_id = get_timeline[-1]['id']
-        print(max_id)
     
     top_five_id = []
 
@@ -328,13 +320,14 @@ def buzz_toot(client: Mastodon):
             "user_id": toot['account']['acct'],
             "username": get_name(toot['account']),
             "content": content,
-            "point": boost_count * 5 + favorite_count
+            "point": boost_count * 2 + favorite_count
         })
         if len(top_five_id) > 5:
             top_five_id = sorted(top_five_id, key=lambda x: x['point'], reverse=True)[:5]
 
-    toot_text = "今月のバズったトゥートTOP5発表！\n\n"
+    toot_text = "先月のバズったトゥートTOP5発表！\n\n"
     for i in range(5):
         toot = top_five_id[i]
-        toot_text += f"{i+1}. {toot['username']} 「{toot['content']}」\n{base_url}/@{toot['user_id']}/{toot['id']}\n"
+        username = toot['username'][0:10]
+        toot_text += f"{i+1}. {username} 「{toot['content']}」\n{base_url}/@{toot['user_id']}/{toot['id']}\n"
     client.toot(toot_text)

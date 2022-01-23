@@ -1,7 +1,7 @@
 developer_account_id: 4
 tag:
   dish_tag: '<a href="https://mastodon.compositecomputer.club/tags/CompositeCookingClub" class="mention hashtag" rel="tag">#<span>CompositeCookingClub</span></a>'
-  boost_tag: '<a href="https://mastodon.compositecomputer.club/tags/拡散してロックマン"class="mention hashtag" rel="tag">#<span>拡散してロックマン</span></a>'
+  boost_tag: '#拡散してロックマン'
   todays_task_tag: '<a href="https://mastodon.compositecomputer.club/tags/今日やること" class="mention hashtag" rel="tag">#<span>今日やること</span></a>'
   tomorrows_task_tag: '<a href="https://mastodon.compositecomputer.club/tags/明日やること" class="mention hashtag" rel="tag">#<span>明日やること</span></a>'
 time:
