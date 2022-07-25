@@ -21,7 +21,7 @@ class Bot(StreamListener):
         'random'
     ]
 
-    def __init__(self, client):
+    def __init__(self, client: Mastodon):
         super(Bot, self).__init__()
         self.client = client
 
@@ -37,7 +37,7 @@ class Bot(StreamListener):
         if 'ロックマン' in get_status['content']:
             self.client.status_favourite(get_status)
             if re.search(r'((お(腹|なか)(空|す)いた)|(腹|はら)(減|へ)った)', get_status['content']):
-                food_terro(self.client)
+                #food_terro(self.client)
                 return
             if "トゥート" in get_status['content'] and "保存" in get_status['content']:
                 save_toot(self.client, get_status['content'])
@@ -110,7 +110,7 @@ def LTLlisten(client: Mastodon):
     bot = Bot(client)
     while True:
         try:
-            client.stream_local(bot)
+            client.stream_local(bot, timeout=50000)
         except Exception as e:
             print(datetime.now())
             print(e)
