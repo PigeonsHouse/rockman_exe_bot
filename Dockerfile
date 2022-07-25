@@ -9,7 +9,4 @@ WORKDIR /opt/rockman
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
-ENV TZ Asia/Tokyo
-
 CMD [ "python", "main.py" ]
-
