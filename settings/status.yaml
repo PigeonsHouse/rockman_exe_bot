@@ -1,5 +1,5 @@
 schedule_bool:
-  chime: true
+  chime: false
   random: false
   spring: false
-  summer: false
+  summer: true
